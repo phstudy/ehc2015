@@ -2,9 +2,11 @@ package org.phstudy;
 
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.ReduceContext;
 import org.apache.hadoop.mapreduce.Reducer;
 
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -23,5 +25,21 @@ public class SortCounterReducer extends Reducer<MyLongWritable, Text, LongWritab
                 context.write(count, value);
             }
         }
+    }
+
+    @Override
+    public void run(Context context) throws IOException, InterruptedException {
+        setup(context);
+        while (context.nextKey()) {
+            if(counter.get() < 20) {
+                reduce(context.getCurrentKey(), context.getValues(), context);
+                // If a back up store is used, reset it
+                Iterator<Text> iter = context.getValues().iterator();
+                if (iter instanceof ReduceContext.ValueIterator) {
+                    ((ReduceContext.ValueIterator<Text>) iter).resetBackupStore();
+                }
+            }
+        }
+        cleanup(context);
     }
 }
