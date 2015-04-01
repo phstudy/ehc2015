@@ -4,6 +4,12 @@ apply plugin: 'application'
 
 mainClassName = "org.phstudy.ItemCount"
 
+sourceCompatibility = 1.6
+
+compileJava {
+    targetCompatibility = 1.6
+}
+
 repositories {
     mavenCentral();
 
@@ -19,6 +25,7 @@ jar {
 }
 
 dependencies {
+	compile 'commons-daemon:commons-daemon:1.0.13'
     compile 'commons-httpclient:commons-httpclient:3.1'
     compile 'org.apache.hadoop:hadoop-client:2.0.0-cdh4.7.1'
     compile 'org.apache.hadoop:hadoop-mapreduce-examples:2.0.0-cdh4.7.1'

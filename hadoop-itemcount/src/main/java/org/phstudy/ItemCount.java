@@ -6,6 +6,8 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
 
@@ -19,7 +21,7 @@ public class ItemCount {
     public static void main(String[] args) throws Exception{
         Configuration conf = new Configuration();
         String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
-        String in = "excite-small.log";
+        String in = "D01.csv";
         String out = "out/" + new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
         if (otherArgs.length >= 1) {
             in = otherArgs[0];
@@ -27,6 +29,7 @@ public class ItemCount {
         if (otherArgs.length >= 2) {
             out = otherArgs[1];
         }
+        String immediateOut = out + "-immediate";
 
         Job job = Job.getInstance(conf, "item count");
         job.setJarByClass(ItemCount.class);
@@ -39,15 +42,14 @@ public class ItemCount {
         job.setOutputValueClass(IntWritable.class);
 
         FileInputFormat.addInputPath(job, new Path(in));
-        FileOutputFormat.setOutputPath(job, new Path(out));
-        System.out.println("The output goes to: " + out);
+        FileOutputFormat.setOutputPath(job, new Path(immediateOut));
 
         job.waitForCompletion(true);
 
+        boolean rst = false;
         if(job.isSuccessful()) {
-            String out2 = "out/" + new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
-
             Job job2 = Job.getInstance(conf, "item count2");
+            job2.setNumReduceTasks(1);
             job2.setJarByClass(ItemCount.class);
 
             job2.setMapperClass(SortCounterMapper.class);
@@ -56,10 +58,13 @@ public class ItemCount {
             job2.setOutputKeyClass(MyLongWritable.class);
             job2.setOutputValueClass(Text.class);
 
-            FileInputFormat.addInputPath(job2, new Path(out + "/part-r-00000"));
-            FileOutputFormat.setOutputPath(job2, new Path(out2));
+            MultipleInputs.addInputPath(job2, new Path(immediateOut), TextInputFormat.class);
+            FileOutputFormat.setOutputPath(job2, new Path(out));
 
-            System.exit(job2.waitForCompletion(true) ? 0 : 1);
+            rst = job2.waitForCompletion(true);
         }
+        System.out.println("The output goes to: " + out);
+        System.out.println("$ hdfs dfs -cat " + out + "/part-r-00000");
+        System.exit(rst ? 0 : 1);
     }
 }
