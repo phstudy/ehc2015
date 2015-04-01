@@ -21,6 +21,8 @@ public class ItemCount {
     public static void main(String[] args) throws Exception{
         Configuration conf = new Configuration();
         String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
+
+        // you can download the dataset from http://study-student-class.s3.amazonaws.com/NUTN%20Master%20Class/Second%20year/First%20term/Data%20Mining/Homework1/Dataset_3__SuperMarket/D01.csv
         String in = "D01.csv";
         String out = "out/" + new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
         if (otherArgs.length >= 1) {
