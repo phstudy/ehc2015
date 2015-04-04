@@ -1,0 +1,6 @@
+impala-shell -q "CREATE TABLE parquet_d01_500 ( 
+	id STRING, 
+	item STRING 
+) stored as parquetfile;
+
+insert into parquet_d01_500 select id, item from d01_500;"

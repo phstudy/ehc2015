@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+hive -f script_small.q

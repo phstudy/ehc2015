@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+impala-shell -f script.q -B -o results.txt --output_delimiter='\t';

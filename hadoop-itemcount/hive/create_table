@@ -1,0 +1,12 @@
+hive -e "CREATE TABLE d01_500 ( 
+	date_time STRING, 
+	id STRING, 
+	age STRING, 
+	area STRING, 
+	item_class STRING, 
+	item STRING, 
+	num STRING, 
+	cost STRING, 
+	price STRING 
+) ROW FORMAT DELIMITED FIELDS TERMINATED BY \",\";
+LOAD DATA LOCAL INPATH '/root/dataset/D01_500.csv' OVERWRITE INTO TABLE d01_500";
