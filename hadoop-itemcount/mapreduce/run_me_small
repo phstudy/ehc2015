@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+DATE=`date +%Y%m%d%H%M%S`
+hadoop jar hadoop-itemcount.jar /user/root/D01.csv /user/root/out/$DATE
+

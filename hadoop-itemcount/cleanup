@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+hdfs dfs -rm -r -skipTrash /user/root/out
+#hdfs dfs -rm -r /user/root/.Trash/Current
