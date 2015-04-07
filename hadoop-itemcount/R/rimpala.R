@@ -6,7 +6,7 @@ options(java.parameters = "-Xmx1000m")
 
 library(RImpala)
 
-rimpala.init("/usr/lib/impala/lib")
+rimpala.init(libs="/usr/lib/impala/lib")
 
 rimpala.connect(IP="localhost", port="21050")
 
