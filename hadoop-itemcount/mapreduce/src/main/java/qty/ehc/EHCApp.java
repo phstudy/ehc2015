@@ -3,14 +3,13 @@ package qty.ehc;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.hadoop.util.ProgramDriver;
 import org.apache.hadoop.util.Tool;
 import org.phstudy.ItemCount;
 import org.phstudy.MyLongWritable;
@@ -30,17 +29,19 @@ public class EHCApp extends Configured implements Tool {
 
         //
         String immediateOut = "./ehc/" + System.currentTimeMillis();
-        args = new String[] { "/Users/qrtt1/Downloads/EHC_1st_round.log", immediateOut };
+        args = new String[] { "./EHC_1st_round.log", immediateOut };
+//        args = new String[] { "/Users/qrtt1/Downloads/EHC_1st_round.log", immediateOut };
         setConf(new Configuration());
         Configuration conf = getConf();
 
         Job job = Job.getInstance(conf, "qty app");
+        job.getConfiguration().set("mapreduce.framework.name", "local");
         job.setJarByClass(EHCApp.class);
         job.setMapperClass(QtyMapper.class);
         job.setCombinerClass(QtyReducer.class);
         job.setReducerClass(QtyReducer.class);
         job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(IntWritable.class);
+        job.setOutputValueClass(LongWritable.class);
         FileInputFormat.addInputPath(job, new Path(args[0]));
         FileOutputFormat.setOutputPath(job, new Path(args[1]));
         job.waitForCompletion(true);
@@ -48,6 +49,7 @@ public class EHCApp extends Configured implements Tool {
         boolean rst = false;
         if (job.isSuccessful()) {
             Job job2 = Job.getInstance(conf, "item count2");
+            job2.getConfiguration().set("mapreduce.framework.name", "local");
             job2.setNumReduceTasks(1);
             job2.setJarByClass(ItemCount.class);
 
