@@ -88,6 +88,7 @@ public class ItemCount {
 
                 InputStream is = codec.createInputStream(hdfs.open(hdfsOutFilePath));
                 OutputStream out = hdfs.create(hdfsOutExtractedFilePath);
+                is.skip(512); //skip tar header
                 IOUtils.copyBytes(is, out, conf);
 
                 hdfs.close();
@@ -113,7 +114,9 @@ public class ItemCount {
 
                 FSDataOutputStream fsdos = hdfs.create(hdfsOutExtractedFilePath);
 
-                int len;
+                int len = zgis.read(outbuf, 0, 65536);
+                fsdos.write(outbuf, 512, len - 512); // skip tar header
+
                 while ((len = zgis.read(outbuf, 0, 65536)) != -1) {
                     fsdos.write(outbuf, 0, len);
                 }
