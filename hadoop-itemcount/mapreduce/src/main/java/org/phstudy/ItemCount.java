@@ -1,72 +1,143 @@
 package org.phstudy;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.io.compress.CompressionCodecFactory;
+import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
+import qty.ehc.QtyMapper;
 
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.logging.Logger;
 
 /**
  * Created by study on 3/28/15.
  */
 public class ItemCount {
-    public static void main(String[] args) throws Exception{
-        Configuration conf = new Configuration();
-        String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
+    private static String in = "./EHC_1st.tar.gz";
+    private static String out = "out/" + new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
 
-        // you can download the dataset from http://study-student-class.s3.amazonaws.com/NUTN%20Master%20Class/Second%20year/First%20term/Data%20Mining/Homework1/Dataset_3__SuperMarket/D01.csv
-        String in = "D01.csv";
-        String out = "out/" + new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
-        if (otherArgs.length >= 1) {
-            in = otherArgs[0];
+    private static String hdfs_out = "hdfs://master/tmp/Team01/EHC_1st.tar.gz";
+    private static String hdfs_out_extracted = "hdfs://master/tmp/Team01/EHC_1st_round.log";
+
+    private static Logger logger = Logger.getLogger("ItemCount");
+
+    public static void main(String[] args) throws Exception {
+        ExecutorService es  = Executors.newFixedThreadPool(8);
+        //System.setProperty("HADOOP_USER_NAME", "hdfs");
+
+        es.execute(new ComputeResult(args));
+        es.execute(new CopyFile());
+
+        es.shutdown();
+    }
+
+    static class CopyFile implements Runnable {
+        @Override
+        public void run() {
+            try {
+                Configuration conf = new Configuration();
+                conf.set("fs.defaultFS", "hdfs://master");
+
+                FileSystem hdfs = FileSystem.get(conf);
+
+                Path localFilePath = new Path(in);
+                Path hdfsOutFilePath = new Path(hdfs_out);
+                Path hdfsOutExtractedFilePath = new Path(hdfs_out_extracted);
+
+                hdfs.copyFromLocalFile(localFilePath, hdfsOutFilePath);
+
+                CompressionCodecFactory factory = new CompressionCodecFactory(conf);
+                CompressionCodec codec = factory.getCodecByClassName(GzipCodec.class.getCanonicalName());
+
+                InputStream is = codec.createInputStream(hdfs.open(hdfsOutFilePath));
+                OutputStream out = hdfs.create(hdfsOutExtractedFilePath);
+                IOUtils.copyBytes(is, out, conf);
+
+                hdfs.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
-        if (otherArgs.length >= 2) {
-            out = otherArgs[1];
+    }
+
+    static class ComputeResult implements Runnable {
+        final String[] args;
+
+        public ComputeResult(String[] args) {
+            this.args = args;
         }
-        String immediateOut = out + "-immediate";
 
-        Job job = Job.getInstance(conf, "item count");
-        job.setJarByClass(ItemCount.class);
+        @Override
+        public void run() {
+            try {
+                Configuration conf = new Configuration();
+                GenericOptionsParser optionParser = new GenericOptionsParser(conf, args);
+                String[] remainingArgs = optionParser.getRemainingArgs();
 
-        job.setMapperClass(ItemCountMapper.class);
-        job.setCombinerClass(ItemCountReducer.class);
-        job.setReducerClass(ItemCountReducer.class);
+                if (remainingArgs.length != 2) {
+                    logger.info("Use default input and output...");
+                    remainingArgs = new String[]{in, out};
+                }
+                in = remainingArgs[0];
+                out = remainingArgs[1];
 
-        job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(IntWritable.class);
 
-        FileInputFormat.addInputPath(job, new Path(in));
-        FileOutputFormat.setOutputPath(job, new Path(immediateOut));
+                String immediateOut = out + "-immediate";
 
-        job.waitForCompletion(true);
+                Job job = Job.getInstance(conf, "extract job");
+                job.setJarByClass(ItemCount.class);
 
-        boolean rst = false;
-        if(job.isSuccessful()) {
-            Job job2 = Job.getInstance(conf, "item count2");
-            job2.setNumReduceTasks(1);
-            job2.setJarByClass(ItemCount.class);
+                job.setInputFormatClass(TextInputFormat.class);
 
-            job2.setMapperClass(SortCounterMapper.class);
-            job2.setReducerClass(SortCounterReducer.class);
+                job.setMapperClass(QtyMapper.class);
+                job.setCombinerClass(ItemCountReducer.class);
+                job.setReducerClass(ItemCountReducer.class);
 
-            job2.setOutputKeyClass(MyLongWritable.class);
-            job2.setOutputValueClass(Text.class);
+                job.setOutputKeyClass(Text.class);
+                job.setOutputValueClass(LongWritable.class);
 
-            MultipleInputs.addInputPath(job2, new Path(immediateOut), TextInputFormat.class);
-            FileOutputFormat.setOutputPath(job2, new Path(out));
+                FileInputFormat.addInputPath(job, new Path(in));
+                FileOutputFormat.setOutputPath(job, new Path(immediateOut));
 
-            rst = job2.waitForCompletion(true);
+                job.waitForCompletion(true);
+
+                if (job.isSuccessful()) {
+                    Job job2 = Job.getInstance(conf, "sort job");
+                    job2.setNumReduceTasks(1);
+                    job2.setJarByClass(ItemCount.class);
+
+                    job2.setMapperClass(SortCounterMapper.class);
+                    job2.setReducerClass(SortCounterReducer.class);
+
+                    job2.setOutputKeyClass(MyLongWritable.class);
+                    job2.setOutputValueClass(Text.class);
+
+                    MultipleInputs.addInputPath(job2, new Path(immediateOut), TextInputFormat.class);
+                    FileOutputFormat.setOutputPath(job2, new Path(out));
+
+                    job2.waitForCompletion(true);
+                }
+                logger.info("The output goes to: " + out);
+                logger.info("$ cat " + out + "/part-r-00000");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
-        System.out.println("The output goes to: " + out);
-        System.out.println("$ hdfs dfs -cat " + out + "/part-r-00000");
-        System.exit(rst ? 0 : 1);
     }
 }

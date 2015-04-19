@@ -38,7 +38,7 @@ public class QtyMapper extends Mapper<LongWritable, Text, Text, LongWritable> {
             try {
 
                 context.write(new Text(data[x - 1]),
-                        new LongWritable(Integer.parseInt(data[x]) 
+                        new LongWritable(Integer.parseInt(data[x])
                                 * Integer.parseInt(data[x + 1])));
 
             } catch (Exception e) {

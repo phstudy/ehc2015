@@ -2,7 +2,7 @@ apply plugin: 'java'
 apply plugin: 'eclipse'
 apply plugin: 'application'
 
-mainClassName = "qty.ehc.EHCApp"
+mainClassName = "org.phstudy.ItemCount"
 
 sourceCompatibility = 1.6
 
