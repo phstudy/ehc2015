@@ -2,6 +2,7 @@ package org.phstudy;
 
 import com.google.common.io.Files;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
@@ -18,6 +19,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.text.SimpleDateFormat;
@@ -26,6 +28,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
+import java.util.zip.GZIPInputStream;
 
 /**
  * Created by study on 3/28/15.
@@ -35,8 +38,6 @@ public class ItemCount {
     private static String out = "out/" + new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
 
     private static String result = "./Team01_Result.txt";
-
-
     private static String hdfs_out = "hdfs://master/tmp/Team01/EHC_1st.tar.gz";
     private static String hdfs_out_extracted = "hdfs://master/tmp/Team01/EHC_1st_round.log";
 
@@ -44,10 +45,24 @@ public class ItemCount {
 
     public static void main(String[] args) throws Exception {
         ExecutorService es = Executors.newFixedThreadPool(8);
-        //System.setProperty("HADOOP_USER_NAME", "hdfs");
+        //System.setProperty("HADOOP_USER_NAME", "root");
 
-        es.execute(new ComputeResult(args));
-        es.execute(new CopyFile());
+        Configuration conf = new Configuration();
+        //conf.set("mapred.min.split.size", "3");
+        //conf.set("io.sort.mb", "256");
+
+        GenericOptionsParser optionParser = new GenericOptionsParser(conf, args);
+        String[] remainingArgs = optionParser.getRemainingArgs();
+
+        if (remainingArgs.length != 2) {
+            logger.info("Use default input and output...");
+            remainingArgs = new String[]{in, out};
+        }
+        in = remainingArgs[0];
+        out = remainingArgs[1];
+        es.execute(new ComputeResult(conf)); // take 17 secs...
+        //es.execute(new CopyFile()); // take 20 secs...
+        es.execute(new CopyFile2()); // take 17 secs...
 
         es.shutdown();
         es.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
@@ -82,28 +97,46 @@ public class ItemCount {
         }
     }
 
-    static class ComputeResult implements Runnable {
-        final String[] args;
+    static class CopyFile2 implements Runnable {
+        @Override
+        public void run() {
+            try {
+                Configuration conf = new Configuration();
+                conf.set("fs.defaultFS", "hdfs://master");
 
-        public ComputeResult(String[] args) {
-            this.args = args;
+                FileSystem hdfs = FileSystem.get(conf);
+
+                Path hdfsOutExtractedFilePath = new Path(hdfs_out_extracted);
+
+                GZIPInputStream zgis = new GZIPInputStream(new FileInputStream(in), 65536);
+                byte[] outbuf = new byte[65536];
+
+                FSDataOutputStream fsdos = hdfs.create(hdfsOutExtractedFilePath);
+
+                int len;
+                while ((len = zgis.read(outbuf, 0, 65536)) != -1) {
+                    fsdos.write(outbuf, 0, len);
+                }
+
+                zgis.close();
+                fsdos.close();
+                hdfs.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    static class ComputeResult implements Runnable {
+        final Configuration conf;
+
+        public ComputeResult(Configuration conf) {
+            this.conf = conf;
         }
 
         @Override
         public void run() {
             try {
-                Configuration conf = new Configuration();
-                GenericOptionsParser optionParser = new GenericOptionsParser(conf, args);
-                String[] remainingArgs = optionParser.getRemainingArgs();
-
-                if (remainingArgs.length != 2) {
-                    logger.info("Use default input and output...");
-                    remainingArgs = new String[]{in, out};
-                }
-                in = remainingArgs[0];
-                out = remainingArgs[1];
-
-
                 String immediateOut = out + "-immediate";
 
                 Job job = Job.getInstance(conf, "extract job");
