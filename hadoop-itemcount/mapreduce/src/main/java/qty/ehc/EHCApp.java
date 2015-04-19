@@ -6,6 +6,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
@@ -18,38 +19,43 @@ import org.phstudy.SortCounterReducer;
 
 public class EHCApp extends Configured implements Tool {
 
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Override
     public int run(String[] args) throws Exception {
-        // if (args.length != 2) {
-        // System.err.println("Usage: wordmedian <in> <out>");
-        // return 0;
-        // }
-        long startTime = System.currentTimeMillis();
-        args = new String[] { "abc.log", "./ehc/" + System.currentTimeMillis() };
 
-        //
-        String immediateOut = "./ehc/" + System.currentTimeMillis();
-        args = new String[] { "./EHC_1st_round.log", immediateOut };
-//        args = new String[] { "/Users/qrtt1/Downloads/EHC_1st_round.log", immediateOut };
+        for (int i = 0; i < args.length; i++) {
+            String string = args[i];
+            System.out.println("i=" + i + ", " + string);
+        }
+
+        Class mapperClass = Class.forName(args[2]);
+        long startTime = System.currentTimeMillis();
+
+        String input = args[0];
+        String output = args[1];
+        String tmpFile = "/tmp/" + System.currentTimeMillis();
         setConf(new Configuration());
         Configuration conf = getConf();
 
+        int splitSize = 1024 * 1024 * 1024;
+        conf.set("mapreduce.input.fileinputformat.split.minsize", "" + splitSize);
+        conf.set("mapreduce.input.fileinputformat.split.maxsize", "" + splitSize);
+
         Job job = Job.getInstance(conf, "qty app");
-        job.getConfiguration().set("mapreduce.framework.name", "local");
         job.setJarByClass(EHCApp.class);
-        job.setMapperClass(QtyMapper.class);
+        job.setMapperClass(mapperClass);
         job.setCombinerClass(QtyReducer.class);
         job.setReducerClass(QtyReducer.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(LongWritable.class);
-        FileInputFormat.addInputPath(job, new Path(args[0]));
-        FileOutputFormat.setOutputPath(job, new Path(args[1]));
+        FileInputFormat.addInputPath(job, new Path(input));
+        FileOutputFormat.setOutputPath(job, new Path(tmpFile));
         job.waitForCompletion(true);
-        String out = "./ehc_out/" + System.currentTimeMillis();
+        long mediumTime = System.currentTimeMillis();
+
         boolean rst = false;
         if (job.isSuccessful()) {
             Job job2 = Job.getInstance(conf, "item count2");
-            job2.getConfiguration().set("mapreduce.framework.name", "local");
             job2.setNumReduceTasks(1);
             job2.setJarByClass(ItemCount.class);
 
@@ -59,24 +65,25 @@ public class EHCApp extends Configured implements Tool {
             job2.setOutputKeyClass(MyLongWritable.class);
             job2.setOutputValueClass(Text.class);
 
-            MultipleInputs.addInputPath(job2, new Path(immediateOut), TextInputFormat.class);
+            MultipleInputs.addInputPath(job2, new Path(tmpFile), TextInputFormat.class);
 
-            FileOutputFormat.setOutputPath(job2, new Path(out));
+            FileOutputFormat.setOutputPath(job2, new Path(output));
 
             rst = job2.waitForCompletion(true);
         }
 
         long endTime = System.currentTimeMillis();
-        System.out.println("The output goes to: " + out);
-        System.out.println("$ hdfs dfs -cat " + out + "/part-r-00000");
+        System.out.println("The output goes to: " + output);
+        System.out.println("$ hdfs dfs -cat " + output + "/part-r-00000");
         System.out.println(endTime - startTime);
+        System.out.println(endTime - mediumTime);
         System.exit(rst ? 0 : 1);
         return rst ? 0 : 1;
     }
 
     public static void main(String[] args) throws Throwable {
         EHCApp app = new EHCApp();
-        app.run(null);
+        app.run(args);
         // ProgramDriver driver = new ProgramDriver();
         // driver.addClass("qty app", EHCApp.class, "xd");
         //
