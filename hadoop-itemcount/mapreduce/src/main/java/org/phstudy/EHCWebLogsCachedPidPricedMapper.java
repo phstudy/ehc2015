@@ -16,6 +16,7 @@ public class EHCWebLogsCachedPidPricedMapper extends Mapper<LongWritable, Text, 
 
     private static HashMap<String, Integer> pidAndPriceMap = new HashMap<String, Integer>();
     private static HashMap<String, Text> pidTextMap = new HashMap<String, Text>();
+    private static HashMap<String, Integer> countStrInteger = new HashMap<String, Integer>();
 
     @Override
     protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
@@ -42,12 +43,18 @@ public class EHCWebLogsCachedPidPricedMapper extends Mapper<LongWritable, Text, 
             try {
 
                 String pid = data[x - 1];
+                String nums = data[x];
+                Integer numsInt = countStrInteger.get(nums);
+                if (numsInt == null) {
+                    numsInt = Integer.parseInt(nums);
+                    countStrInteger.put(nums, numsInt);
+                }
+
                 if (pidAndPriceMap.containsKey(pid)) {
-                    context.write(pidTextMap.get(pid),
-                            new LongWritable(Integer.parseInt(data[x]) * pidAndPriceMap.get(pid)));
+                    context.write(pidTextMap.get(pid), new LongWritable(numsInt * pidAndPriceMap.get(pid)));
                 } else {
                     Integer price = Integer.parseInt(data[x + 1]);
-                    context.write(new Text(pid), new LongWritable(Integer.parseInt(data[x]) * price));
+                    context.write(new Text(pid), new LongWritable(numsInt * price));
                     pidAndPriceMap.put(pid, price);
                     pidTextMap.put(pid, new Text(pid));
                 }
