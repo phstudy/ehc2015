@@ -16,8 +16,6 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
 
-import qty.ehc.QtyMapper;
-
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.text.SimpleDateFormat;
@@ -108,7 +106,7 @@ public class ItemCount {
 
                 job.setInputFormatClass(TextInputFormat.class);
 
-                job.setMapperClass(QtyMapper.class);
+                job.setMapperClass(EHCWebLogsMapper.class);
                 job.setCombinerClass(ItemCountReducer.class);
                 job.setReducerClass(ItemCountReducer.class);
 
