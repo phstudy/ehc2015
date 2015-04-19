@@ -1,5 +1,6 @@
 package org.phstudy;
 
+import com.google.common.io.Files;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -16,6 +17,7 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
 
+import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.text.SimpleDateFormat;
@@ -32,13 +34,16 @@ public class ItemCount {
     private static String in = "./EHC_1st.tar.gz";
     private static String out = "out/" + new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
 
+    private static String result = "./Team01_Result.txt";
+
+
     private static String hdfs_out = "hdfs://master/tmp/Team01/EHC_1st.tar.gz";
     private static String hdfs_out_extracted = "hdfs://master/tmp/Team01/EHC_1st_round.log";
 
     private static Logger logger = Logger.getLogger("ItemCount");
 
     public static void main(String[] args) throws Exception {
-        ExecutorService es  = Executors.newFixedThreadPool(8);
+        ExecutorService es = Executors.newFixedThreadPool(8);
         //System.setProperty("HADOOP_USER_NAME", "hdfs");
 
         es.execute(new ComputeResult(args));
@@ -134,8 +139,11 @@ public class ItemCount {
 
                     job2.waitForCompletion(true);
                 }
-                logger.info("The output goes to: " + out);
-                logger.info("$ cat " + out + "/part-r-00000");
+
+                //logger.info("The output goes to: " + out);
+                //logger.info("$ cat " + out + "/part-r-00000");
+
+                Files.copy(new File(out + "/part-r-00000"), new File(result));
             } catch (Exception e) {
                 e.printStackTrace();
             }

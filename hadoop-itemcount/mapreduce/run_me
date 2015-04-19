@@ -1,4 +1,4 @@
 #!/bin/env bash
 DATE=`date +%Y%m%d%H%M%S`
-hadoop --config . jar mapreduce.jar /data/EHC_1st.tar.gz /user/root/out/$DATE
+hadoop --config . jar mapreduce.jar /data/EHC_1st.tar.gz $(pwd)/out/$DATE
 

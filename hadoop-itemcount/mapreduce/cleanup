@@ -1,5 +1,6 @@
 #!/bin/env bash
 
-hdfs dfs -rm -r -skipTrash /user/root/out
+rm ./Team01_Result.txt
+rm -rf $(pwd)/out
 hdfs dfs -rm -r -skipTrash /tmp/Team01/
 hdfs dfs -expunge
