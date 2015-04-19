@@ -1,0 +1,5 @@
+#!/bin/env bash
+
+hdfs dfs -rm -r -skipTrash /user/root/out
+hdfs dfs -rm -r -skipTrash /tmp/Team01/
+hdfs dfs -expunge
