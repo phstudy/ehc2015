@@ -15,6 +15,7 @@ import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
+
 import qty.ehc.QtyMapper;
 
 import java.io.InputStream;
@@ -23,6 +24,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 /**
@@ -45,6 +47,7 @@ public class ItemCount {
         es.execute(new CopyFile());
 
         es.shutdown();
+        es.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
     }
 
     static class CopyFile implements Runnable {
