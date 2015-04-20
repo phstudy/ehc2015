@@ -196,6 +196,8 @@ public class MyLineReader {
             return 0;
         }
         
+        // 這個 readline 的中心思想只有 1 個，把多行 order log 的 plist 合併在一起，減少 input format 呼叫 readline 的次數
+        
         int countDown = 1024;
         ArrayList<String> batchData = new ArrayList<String>();
 
