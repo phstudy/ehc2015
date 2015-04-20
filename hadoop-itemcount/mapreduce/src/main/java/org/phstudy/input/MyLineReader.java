@@ -157,13 +157,22 @@ public class MyLineReader {
             return consumedBytes;
         } else {
 
-            for (int i = 0; i < 10000; i++) {
+            for (int i = 0; i < 256; i++) {
                 consumedBytes = readDefaultLine(str, maxLineLength, maxBytesToConsume);
-                if (str.toString().contains(";act=order;")) {
-                    break;
+                
+                // 用 contains 要掃完全部才會停，改自己判斷比較快一些
+                String s = str.toString();
+                int idx = s.indexOf(";act=");
+                if(idx >=0){
+                    idx+=";act=".length() ;
+                    if (s.charAt(idx)=='o'){
+                        break;
+                    }
                 }
+//                if (str.toString().contains(";act=order;")) {
+//                    break;
+//                }
             }
-            // System.out.println("xd2: " + str);
 
             return consumedBytes;
         }
