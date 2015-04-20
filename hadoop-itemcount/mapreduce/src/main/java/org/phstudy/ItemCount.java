@@ -78,6 +78,7 @@ public class ItemCount {
         // done
         long estimatedTime = System.currentTimeMillis() - startTime;
         logger.info("Time elapsed: " + estimatedTime);
+        System.exit(0);
     }
 }
 
