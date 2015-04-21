@@ -1,6 +1,7 @@
 package org.phstudy.job;
 
 import com.google.common.io.Files;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
@@ -10,6 +11,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.ehc.inputv3.ByteBufferOrderPlistInputFormat;
 import org.phstudy.*;
 
 import java.io.File;
@@ -39,7 +41,7 @@ public class ComputeResult implements Runnable {
             job.setJarByClass(ItemCount.class);
 
             job.setInputFormatClass(TextInputFormat.class);
-            //job.setInputFormatClass(MyInputFormat.class);
+            job.setInputFormatClass(ByteBufferOrderPlistInputFormat.class);
 
             job.setMapperClass(EHCWebLogsMapper.class);
             job.setCombinerClass(ItemCountReducer.class);

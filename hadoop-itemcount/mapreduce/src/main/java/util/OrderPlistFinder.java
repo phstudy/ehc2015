@@ -16,7 +16,7 @@ public class OrderPlistFinder {
     ByteBuffer processBuffer = ByteBuffer.allocateDirect(1024 * 1024);
     ByteBuffer resultBuffer = ByteBuffer.allocateDirect(1024 * 1024);
     InputStream input;
-    boolean isEOF = false;
+    public boolean isEOF = false;
 
     public OrderPlistFinder(InputStream input) {
         this.input = input;
@@ -43,6 +43,9 @@ public class OrderPlistFinder {
             // 0 1 2 3 4 5
             findText(processBuffer, (byte) 'p', (byte) 't', (byte) '=');
             byte[] data = extractTo(processBuffer, (byte) ';');
+            if (data.length == 0) {
+                break;
+            }
             resultBuffer.put(data).put((byte) ',');
         }
 
@@ -59,7 +62,7 @@ public class OrderPlistFinder {
         buffer.mark();
         int stopPosition = 0;
         for (int i = 0; i < 1024; i++) {
-            if (buffer.get() == stopToken) {
+            if (buffer.hasRemaining() && buffer.get() == stopToken) {
                 stopPosition = buffer.position();
                 break;
             }
@@ -114,6 +117,11 @@ public class OrderPlistFinder {
         return false;
     }
 
+    // public boolean isResultFull() {
+    // System.out.println(resultBuffer.remaining());
+    // return resultBuffer.remaining() > 1024 * 16;
+    // }
+
     public int flushResult(byte[] largeBuffer) {
         resultBuffer.flip();
         if (resultBuffer.remaining() > largeBuffer.length) {
@@ -126,10 +134,12 @@ public class OrderPlistFinder {
         }
         resultBuffer.get(largeBuffer, 0, consumed);
         if (resultBuffer.hasRemaining()) {
-            return largeBuffer.length;
+            throw new IllegalStateException("result buffer should be flush >\"<");
         }
+        resultBuffer.clear();
 
         if (skipTail) {
+//            logger.debug("skip: " + consumed);
             consumed -= 1;
         }
         return consumed;
