@@ -14,6 +14,7 @@ public class OrderPlistFinder {
 
     static Log logger = LogFactory.getLog(OrderPlistFinder.class);
     ByteBuffer processBuffer = ByteBuffer.allocateDirect(1024 * 1024);
+    ByteBuffer resultBuffer = ByteBuffer.allocateDirect(1024 * 1024);
     InputStream input;
     boolean isEOF = false;
 
@@ -21,7 +22,7 @@ public class OrderPlistFinder {
         this.input = input;
     }
 
-    public void foo() throws IOException {
+    public void sink() throws IOException {
         int readCount = 0;
         byte[] buffer = new byte[1024 * 128];
         while (processBuffer.hasRemaining()) {
@@ -42,7 +43,7 @@ public class OrderPlistFinder {
             // 0 1 2 3 4 5
             findText(processBuffer, (byte) 'p', (byte) 't', (byte) '=');
             byte[] data = extractTo(processBuffer, (byte) ';');
-            System.err.println(new String(data));
+            resultBuffer.put(data).put((byte) ',');
         }
 
         /* 把剩下的資料搬到前面，下一回使用 */
@@ -113,13 +114,38 @@ public class OrderPlistFinder {
         return false;
     }
 
+    public int flushResult(byte[] largeBuffer) {
+        resultBuffer.flip();
+        if (resultBuffer.remaining() > largeBuffer.length) {
+            logger.warn("result byteArray is too small");
+        }
+        int consumed = Math.min(resultBuffer.remaining(), largeBuffer.length);
+        boolean skipTail = false;
+        if (consumed == resultBuffer.remaining()) {
+            skipTail = true;
+        }
+        resultBuffer.get(largeBuffer, 0, consumed);
+        if (resultBuffer.hasRemaining()) {
+            return largeBuffer.length;
+        }
+
+        if (skipTail) {
+            consumed -= 1;
+        }
+        return consumed;
+    }
+
     public static void main(String[] args) throws IOException {
         Logger.getRootLogger().setLevel(Level.DEBUG);
         FileInputStream in = new FileInputStream(
                 "/Users/qrtt1/test/ehc2015/hadoop-itemcount/mapreduce/src/test/resources/sample1.txt");
         OrderPlistFinder finder = new OrderPlistFinder(in);
-        while(!finder.isEOF){
-            finder.foo();
+        while (!finder.isEOF) {
+            finder.sink();
         }
+
+        byte[] data = new byte[1024 * 1024];
+        int count = finder.flushResult(data);
+        System.out.println(new String(data, 0, count));
     }
 }
