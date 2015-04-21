@@ -54,6 +54,7 @@ public class ComputeResult implements Runnable {
             job.waitForCompletion(true);
 
             if (job.isSuccessful()) {
+                conf.set("mapreduce.output.textoutputformat.separator", ",");
                 Job job2 = Job.getInstance(conf, "sort job");
                 job2.setNumReduceTasks(1);
                 job2.setJarByClass(ItemCount.class);

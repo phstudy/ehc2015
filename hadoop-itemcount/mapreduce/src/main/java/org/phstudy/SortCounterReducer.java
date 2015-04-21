@@ -20,7 +20,7 @@ public class SortCounterReducer extends Reducer<MyLongWritable, Text, Text, Text
         for (Text value : values) {
             int cnt = counter.getAndIncrement();
             if(cnt < n) {
-                context.write(new Text(String.format("%02d,", cnt + 1)), value);
+                context.write(new Text(String.format("%02d", cnt + 1)), value);
             }
         }
     }
