@@ -1,20 +1,19 @@
 package util;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.ByteBuffer;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.ByteBuffer;
+
 public class OrderPlistFinder {
 
     static Log logger = LogFactory.getLog(OrderPlistFinder.class);
-    ByteBuffer processBuffer = ByteBuffer.allocateDirect(1024 * 1024);
-    ByteBuffer resultBuffer = ByteBuffer.allocateDirect(1024 * 1024);
+    ByteBuffer processBuffer = ByteBuffer.allocateDirect(64 * 1024);
+    ByteBuffer resultBuffer = ByteBuffer.allocateDirect(1281674);
     InputStream input;
     public boolean isEOF = false;
 
@@ -24,7 +23,7 @@ public class OrderPlistFinder {
 
     public void sink() throws IOException {
         int readCount = 0;
-        byte[] buffer = new byte[1024 * 128];
+        byte[] buffer = new byte[64 * 1024];
         while (processBuffer.hasRemaining()) {
             int byteToRead = Math.min(buffer.length, processBuffer.remaining());
             readCount = input.read(buffer, 0, byteToRead);
@@ -41,12 +40,23 @@ public class OrderPlistFinder {
         while (findText(processBuffer, (byte) ';', (byte) '=', (byte) 'o')) {
             // p l i s t =
             // 0 1 2 3 4 5
-            findText(processBuffer, (byte) 'p', (byte) 't', (byte) '=');
-            byte[] data = extractTo(processBuffer, (byte) ';');
-            if (data.length == 0) {
+
+            int pos = processBuffer.position();
+
+            if(findText(processBuffer, (byte) 'p', (byte) 't', (byte) '=')) {
+                byte[] data = extractTo(processBuffer, (byte) ';');
+
+                if(data == null) {
+                    processBuffer.position(pos - 6);
+                    break;
+                } else if (data.length == 0) {
+                    break;
+                }
+                resultBuffer.put(data).put((byte) ',');
+            } else {
+                processBuffer.position(pos - 6);
                 break;
             }
-            resultBuffer.put(data).put((byte) ',');
         }
 
         /* 把剩下的資料搬到前面，下一回使用 */
@@ -71,7 +81,7 @@ public class OrderPlistFinder {
         // 什麼都沒找到
         if (stopPosition == 0) {
             buffer.reset();
-            return new byte[0];
+            return null;
         }
 
         buffer.reset();
@@ -97,7 +107,7 @@ public class OrderPlistFinder {
             buffer.get(sixBytes);
             if (sixBytes[0] == firstByte && sixBytes[4] == right2 && sixBytes[5] == right1) {
                 if (logger.isDebugEnabled()) {
-                    logger.debug("found >>" + new String(sixBytes) + "<< current pos: " + buffer.position());
+                    //logger.debug("found >>" + new String(sixBytes) + "<< current pos: " + buffer.position());
                 }
                 return true;
             } else {
@@ -147,15 +157,23 @@ public class OrderPlistFinder {
 
     public static void main(String[] args) throws IOException {
         Logger.getRootLogger().setLevel(Level.DEBUG);
-        FileInputStream in = new FileInputStream(
-                "/Users/qrtt1/test/ehc2015/hadoop-itemcount/mapreduce/src/test/resources/sample1.txt");
+        InputStream in = OrderPlistFinder.class.getResourceAsStream("/sample1.txt");
         OrderPlistFinder finder = new OrderPlistFinder(in);
         while (!finder.isEOF) {
             finder.sink();
         }
 
-        byte[] data = new byte[1024 * 1024];
+        byte[] data = new byte[1281674];
         int count = finder.flushResult(data);
         System.out.println(new String(data, 0, count));
+
+        String[] d = new String(data, 0, count).split(",");
+        int cnt = 0;
+        for(int i = 0;i < d.length ; i+=3) {
+            if(d[i].equals("0005772981"))
+            cnt += Integer.parseInt(d[i+1]);
+        }
+        System.out.println(cnt);
+        System.out.println(cnt * 699);
     }
 }
