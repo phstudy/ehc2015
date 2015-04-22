@@ -1,8 +1,6 @@
 package org.ehc.inputv3.pipe;
 
-import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -11,21 +9,24 @@ import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.util.zip.GZIPInputStream;
 
+import org.apache.commons.io.IOUtils;
+
 /**
  * [SourceReader] =PIPE=> [HDFS WRITER] =PIPE=> [Hadoop InputFormat]
  */
 public class DataHub {
 
     private InputStream from;
-    private OutputStream to;
     private OutputStream duplicatedOutput;
 
     private PipedInputStream firstPipeIn;
     private PipedOutputStream firstPipeOut;
 
-    public DataHub(InputStream from, OutputStream to, OutputStream duplicatedOutput) {
+    private PipedInputStream secondPipeIn;
+    private PipedOutputStream secondPipeOut;
+
+    public DataHub(InputStream from, OutputStream duplicatedOutput) {
         this.from = from;
-        this.to = to;
         this.duplicatedOutput = duplicatedOutput;
 
         preparePipes();
@@ -36,6 +37,9 @@ public class DataHub {
         try {
             firstPipeIn = new PipedInputStream(65536);
             firstPipeOut = new PipedOutputStream(firstPipeIn);
+
+            secondPipeIn = new PipedInputStream(65536);
+            secondPipeOut = new PipedOutputStream(secondPipeIn);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -46,9 +50,13 @@ public class DataHub {
 
     private void bindPipeline() {
         t1 = new Thread(new SourceReader(from, firstPipeOut));
-        t2 = new Thread(new HDFSWriter(firstPipeIn, to, duplicatedOutput));
+        t2 = new Thread(new HDFSWriter(firstPipeIn, secondPipeOut, duplicatedOutput));
         t1.start();
         t2.start();
+    }
+
+    public InputStream getRedirectInput() {
+        return secondPipeIn;
     }
 
     public void join() throws InterruptedException {
@@ -83,10 +91,10 @@ public class DataHub {
         // ByteArrayInputStream from = new
         // ByteArrayInputStream(";askjdf;aklsjdflakjsdfalksdjfalskdfj".getBytes());
         InputStream from = new GZIPInputStream(new FileInputStream("EHC_1st.tar.gz"));
-        FileOutputStream out1 = new FileOutputStream("out1.txt");
-        FileOutputStream out2 = new FileOutputStream("out2.txt");
+        FileOutputStream duplicated = new FileOutputStream("duplicated.txt");
 
-        DataHub dataHub = new DataHub(from, out1, out2);
+        DataHub dataHub = new DataHub(from, duplicated);
+        IOUtils.copy(dataHub.getRedirectInput(), System.out);
         dataHub.join();
     }
 }
