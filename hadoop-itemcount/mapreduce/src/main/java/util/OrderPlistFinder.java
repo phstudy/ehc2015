@@ -1,13 +1,20 @@
 package util;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import java.nio.ByteBuffer;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.phstudy.ItemCount;
 
 public class OrderPlistFinder {
 
@@ -17,8 +24,50 @@ public class OrderPlistFinder {
     protected InputStream input;
     public boolean isEOF = false;
 
+    PipedInputStream pipeIn = new PipedInputStream(1024*1024);
+    PipedOutputStream pipeOut;
+
     public OrderPlistFinder(InputStream input) {
         this.input = input;
+
+        try {
+            pipeOut = new PipedOutputStream(pipeIn);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        new Thread("PipeToHDFS") {
+            public void run() {
+
+                OutputStream hdfsOut = null;
+                try {
+                    Configuration conf = new Configuration();
+                    conf.set("fs.defaultFS", "hdfs://master");
+                    FileSystem hdfs = FileSystem.get(conf);
+                    Path hdfsOutExtractedFilePath = new Path(ItemCount.hdfs_out_extracted);
+                    hdfsOut = hdfs.create(hdfsOutExtractedFilePath);
+                    byte[] buffer = new byte[1024*1024];
+                    while (true) {
+                        int count = pipeIn.read(buffer);
+                        if (count == -1) {
+                            break;
+                        }
+                        hdfsOut.write(buffer, 0, count);
+                    }
+                    logger.warn("finish hdfs pipeline");
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }finally{
+                    try {
+                        hdfsOut.close();
+                    } catch (IOException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }.start();
+
     }
 
     public void sink() throws IOException {
@@ -26,9 +75,10 @@ public class OrderPlistFinder {
         byte[] buffer = new byte[64 * 1024];
         while (processBuffer.hasRemaining()) {
             int byteToRead = Math.min(buffer.length, processBuffer.remaining());
-            readCount = input.read(buffer, 0, byteToRead);
+            readCount = readData(buffer, byteToRead);
             if (readCount == -1) {
                 isEOF = true;
+                closePipe();
                 break;
             }
             processBuffer.put(buffer, 0, readCount);
@@ -43,10 +93,10 @@ public class OrderPlistFinder {
 
             int pos = processBuffer.position();
 
-            if(findText(processBuffer, (byte) 'p', (byte) 't', (byte) '=')) {
+            if (findText(processBuffer, (byte) 'p', (byte) 't', (byte) '=')) {
                 byte[] data = extractTo(processBuffer, (byte) ';');
 
-                if(data == null) {
+                if (data == null) {
                     processBuffer.position(pos - 6);
                     break;
                 } else if (data.length == 0) {
@@ -65,6 +115,24 @@ public class OrderPlistFinder {
         processBuffer.clear();
         processBuffer.put(tail);
 
+    }
+
+    private void closePipe() {
+        try {
+            pipeOut.flush();
+            pipeOut.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    protected int readData(byte[] buffer, int byteToRead) throws IOException {
+        int readCount;
+        readCount = input.read(buffer, 0, byteToRead);
+        if (readCount != -1) {
+            pipeOut.write(buffer, 0, readCount);
+        }
+        return readCount;
     }
 
     private byte[] extractTo(ByteBuffer buffer, byte stopToken) {
@@ -107,7 +175,8 @@ public class OrderPlistFinder {
             buffer.get(sixBytes);
             if (sixBytes[0] == firstByte && sixBytes[4] == right2 && sixBytes[5] == right1) {
                 if (logger.isDebugEnabled()) {
-                    //logger.debug("found >>" + new String(sixBytes) + "<< current pos: " + buffer.position());
+                    // logger.debug("found >>" + new String(sixBytes) +
+                    // "<< current pos: " + buffer.position());
                 }
                 return true;
             } else {
@@ -149,7 +218,7 @@ public class OrderPlistFinder {
         resultBuffer.clear();
 
         if (skipTail) {
-//            logger.debug("skip: " + consumed);
+            // logger.debug("skip: " + consumed);
             consumed -= 1;
         }
         return consumed;
@@ -169,9 +238,9 @@ public class OrderPlistFinder {
 
         String[] d = new String(data, 0, count).split(",");
         int cnt = 0;
-        for(int i = 0;i < d.length ; i+=3) {
-            if(d[i].equals("0005772981"))
-            cnt += Integer.parseInt(d[i+1]);
+        for (int i = 0; i < d.length; i += 3) {
+            if (d[i].equals("0005772981"))
+                cnt += Integer.parseInt(d[i + 1]);
         }
         System.out.println(cnt);
         System.out.println(cnt * 699);

@@ -42,7 +42,6 @@ public class ComputeResult implements Runnable {
 
             job.setInputFormatClass(TextInputFormat.class);
             job.setInputFormatClass(ByteBufferOrderPlistInputFormat.class);
-//            job.setInputFormatClass(org.ehc.inputv4.ByteBufferOrderPlistInputFormat.class);
 
             job.setMapperClass(EHCWebLogsMapper.class);
             job.setCombinerClass(ItemCountReducer.class);
