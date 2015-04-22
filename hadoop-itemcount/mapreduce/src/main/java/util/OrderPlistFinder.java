@@ -14,7 +14,7 @@ public class OrderPlistFinder {
     static Log logger = LogFactory.getLog(OrderPlistFinder.class);
     ByteBuffer processBuffer = ByteBuffer.allocateDirect(64 * 1024);
     ByteBuffer resultBuffer = ByteBuffer.allocateDirect(1281674);
-    InputStream input;
+    protected InputStream input;
     public boolean isEOF = false;
 
     public OrderPlistFinder(InputStream input) {
