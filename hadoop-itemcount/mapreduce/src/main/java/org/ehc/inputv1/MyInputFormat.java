@@ -1,4 +1,4 @@
-package org.phstudy.input;
+package org.ehc.inputv1;
 
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
