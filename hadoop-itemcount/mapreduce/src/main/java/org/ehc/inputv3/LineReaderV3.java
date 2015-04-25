@@ -7,6 +7,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
+import org.ehc.input.common.ILineReader;
 
 import util.OrderPlistFinder;
 
@@ -21,7 +22,7 @@ import util.OrderPlistFinder;
  */
 @InterfaceAudience.LimitedPrivate({ "MapReduce" })
 @InterfaceStability.Unstable
-public class MyLineReader {
+public class LineReaderV3 implements ILineReader {
     private static final int DEFAULT_BUFFER_SIZE = 64 * 1024;
     private int bufferSize = DEFAULT_BUFFER_SIZE;
     private InputStream in;
@@ -46,7 +47,7 @@ public class MyLineReader {
      *            The input stream
      * @throws IOException
      */
-    public MyLineReader(InputStream in) {
+    public LineReaderV3(InputStream in) {
         this(in, DEFAULT_BUFFER_SIZE);
     }
 
@@ -60,7 +61,7 @@ public class MyLineReader {
      *            Size of the read buffer
      * @throws IOException
      */
-    public MyLineReader(InputStream in, int bufferSize) {
+    public LineReaderV3(InputStream in, int bufferSize) {
         this.in = in;
         this.orderPlistFinder = new OrderPlistFinder(in);
         this.bufferSize = bufferSize;
@@ -79,7 +80,7 @@ public class MyLineReader {
      *            configuration
      * @throws IOException
      */
-    public MyLineReader(InputStream in, Configuration conf) throws IOException {
+    public LineReaderV3(InputStream in, Configuration conf) throws IOException {
         this(in, conf.getInt("io.file.buffer.size", DEFAULT_BUFFER_SIZE));
     }
 
@@ -92,7 +93,7 @@ public class MyLineReader {
      * @param recordDelimiterBytes
      *            The delimiter
      */
-    public MyLineReader(InputStream in, byte[] recordDelimiterBytes) {
+    public LineReaderV3(InputStream in, byte[] recordDelimiterBytes) {
         this.in = in;
         this.orderPlistFinder = new OrderPlistFinder(in);
         this.bufferSize = DEFAULT_BUFFER_SIZE;
@@ -112,7 +113,7 @@ public class MyLineReader {
      *            The delimiter
      * @throws IOException
      */
-    public MyLineReader(InputStream in, int bufferSize, byte[] recordDelimiterBytes) {
+    public LineReaderV3(InputStream in, int bufferSize, byte[] recordDelimiterBytes) {
         this.in = in;
         this.orderPlistFinder = new OrderPlistFinder(in);
         this.bufferSize = bufferSize;
@@ -134,7 +135,7 @@ public class MyLineReader {
      *            The delimiter
      * @throws IOException
      */
-    public MyLineReader(InputStream in, Configuration conf, byte[] recordDelimiterBytes) throws IOException {
+    public LineReaderV3(InputStream in, Configuration conf, byte[] recordDelimiterBytes) throws IOException {
         this.in = in;
         this.orderPlistFinder = new OrderPlistFinder(in);
         this.bufferSize = conf.getInt("io.file.buffer.size", DEFAULT_BUFFER_SIZE);

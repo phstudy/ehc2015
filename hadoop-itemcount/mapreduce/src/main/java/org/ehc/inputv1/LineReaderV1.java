@@ -1,15 +1,13 @@
-package org.ehc.inputv2;
+package org.ehc.inputv1;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
+import org.ehc.input.common.ILineReader;
 
 /**
  * A class that provides a line reader from an input stream.
@@ -24,11 +22,10 @@ import org.apache.hadoop.io.Text;
  */
 @InterfaceAudience.LimitedPrivate({"MapReduce"})
 @InterfaceStability.Unstable
-public class MyLineReader {
+public class LineReaderV1 implements ILineReader {
   private static final int DEFAULT_BUFFER_SIZE = 64 * 1024;
   private int bufferSize = DEFAULT_BUFFER_SIZE;
   private InputStream in;
-  private BufferedReader reader;
   private byte[] buffer;
   // the number of bytes of real data in the buffer
   private int bufferLength = 0;
@@ -47,7 +44,7 @@ public class MyLineReader {
    * @param in The input stream
    * @throws IOException
    */
-  public MyLineReader(InputStream in) {
+  public LineReaderV1(InputStream in) {
     this(in, DEFAULT_BUFFER_SIZE);
   }
 
@@ -58,9 +55,8 @@ public class MyLineReader {
    * @param bufferSize Size of the read buffer
    * @throws IOException
    */
-  public MyLineReader(InputStream in, int bufferSize) {
+  public LineReaderV1(InputStream in, int bufferSize) {
     this.in = in;
-    this.reader = new BufferedReader(new InputStreamReader(in));
     this.bufferSize = bufferSize;
     this.buffer = new byte[this.bufferSize];
     this.recordDelimiterBytes = null;
@@ -74,7 +70,7 @@ public class MyLineReader {
    * @param conf configuration
    * @throws IOException
    */
-  public MyLineReader(InputStream in, Configuration conf) throws IOException {
+  public LineReaderV1(InputStream in, Configuration conf) throws IOException {
     this(in, conf.getInt("io.file.buffer.size", DEFAULT_BUFFER_SIZE));
   }
 
@@ -85,7 +81,7 @@ public class MyLineReader {
    * @param in The input stream
    * @param recordDelimiterBytes The delimiter
    */
-  public MyLineReader(InputStream in, byte[] recordDelimiterBytes) {
+  public LineReaderV1(InputStream in, byte[] recordDelimiterBytes) {
     this.in = in;
     this.bufferSize = DEFAULT_BUFFER_SIZE;
     this.buffer = new byte[this.bufferSize];
@@ -101,7 +97,7 @@ public class MyLineReader {
    * @param recordDelimiterBytes The delimiter
    * @throws IOException
    */
-  public MyLineReader(InputStream in, int bufferSize,
+  public LineReaderV1(InputStream in, int bufferSize,
       byte[] recordDelimiterBytes) {
     this.in = in;
     this.bufferSize = bufferSize;
@@ -119,7 +115,7 @@ public class MyLineReader {
    * @param recordDelimiterBytes The delimiter
    * @throws IOException
    */
-  public MyLineReader(InputStream in, Configuration conf,
+  public LineReaderV1(InputStream in, Configuration conf,
       byte[] recordDelimiterBytes) throws IOException {
     this.in = in;
     this.bufferSize = conf.getInt("io.file.buffer.size", DEFAULT_BUFFER_SIZE);
@@ -182,99 +178,73 @@ public class MyLineReader {
             return consumedBytes;
         }
   }
-  
-  boolean noMoreData = false;
 
-    /**
-     * Read a line terminated by one of CR, LF, or CRLF.
+  /**
+   * Read a line terminated by one of CR, LF, or CRLF.
+   */
+  private int readDefaultLine(Text str, int maxLineLength, int maxBytesToConsume)
+  throws IOException {
+    /* We're reading data from in, but the head of the stream may be
+     * already buffered in buffer, so we have several cases:
+     * 1. No newline characters are in the buffer, so we need to copy
+     *    everything and read another buffer from the stream.
+     * 2. An unambiguously terminated line is in buffer, so we just
+     *    copy to str.
+     * 3. Ambiguously terminated line is in buffer, i.e. buffer ends
+     *    in CR.  In this case we copy everything up to CR to str, but
+     *    we also need to see what follows CR: if it's LF, then we
+     *    need consume LF as well, so next call to readLine will read
+     *    from after that.
+     * We use a flag prevCharCR to signal if previous character was CR
+     * and, if it happens to be at the end of the buffer, delay
+     * consuming it until we have a chance to look at the char that
+     * follows.
      */
-    private int readDefaultLine(Text str, int maxLineLength, int maxBytesToConsume) throws IOException {
-        str.clear();
-        
-        
-        if(noMoreData){
-            return 0;
+    str.clear();
+    int txtLength = 0; //tracks str.getLength(), as an optimization
+    int newlineLength = 0; //length of terminating newline
+    boolean prevCharCR = false; //true of prev char was CR
+    long bytesConsumed = 0;
+    do {
+      int startPosn = bufferPosn; //starting from where we left off the last time
+      if (bufferPosn >= bufferLength) {
+        startPosn = bufferPosn = 0;
+        if (prevCharCR)
+          ++bytesConsumed; //account for CR from previous read
+        bufferLength = in.read(buffer);
+        if (bufferLength <= 0)
+          break; // EOF
+      }
+      for (; bufferPosn < bufferLength; ++bufferPosn) { //search for newline
+        if (buffer[bufferPosn] == LF) {
+          newlineLength = (prevCharCR) ? 2 : 1;
+          ++bufferPosn; // at next invocation proceed from following byte
+          break;
         }
-        
-        // 這個 readline 的中心思想只有 1 個，把多行 order log 的 plist 合併在一起，減少 input format 呼叫 readline 的次數
-        
-        int countDown = 1024;
-        ArrayList<String> batchData = new ArrayList<String>();
+        if (prevCharCR) { //CR + notLF, we are at notLF
+          newlineLength = 1;
+          break;
+        }
+        prevCharCR = (buffer[bufferPosn] == CR);
+      }
+      int readLength = bufferPosn - startPosn;
+      if (prevCharCR && newlineLength == 0)
+        --readLength; //CR at the end of the buffer
+      bytesConsumed += readLength;
+      int appendLength = readLength - newlineLength;
+      if (appendLength > maxLineLength - txtLength) {
+        appendLength = maxLineLength - txtLength;
+      }
+      if (appendLength > 0) {
+        str.append(buffer, startPosn, appendLength);
+        txtLength += appendLength;
+      }
+    } while (newlineLength == 0 && bytesConsumed < maxBytesToConsume);
 
-        while (countDown-- > 0) {
-            String input = reader.readLine();
-            if (input == null) {
-                noMoreData=true;
-                break ;
-            }
-            String plist = extractValidOrder(input);
-            if(plist!=null){
-                batchData.add(plist);
-            }
-        }
-        
-  
-        StringBuilder sb = new StringBuilder();
-        sb.append(";act=order;plist=");
-        for (String p : batchData) {
-            sb.append(p).append(",");
-        }
-        sb.setLength(sb.length() - 1);
-        sb.append(";");
-
-        if(batchData.isEmpty()){
-            sb.setLength(0);
-            sb.append(";act=order;plist=;");
-        }
- 
-
-        try {
-            byte[] data = sb.toString().getBytes();
-            str.append(data, 0, data.length);
-            return data.length;
-        } catch (Exception e) {
-            return 0;
-        }
+    if (bytesConsumed > (long)Integer.MAX_VALUE)
+      throw new IOException("Too many bytes before newline: " + bytesConsumed);    
+    return (int)bytesConsumed;
   }
-
-    protected String extractValidOrder(String input) {
-        
-        boolean orderAct = false;
-        boolean plistWithItems = false;
-        int idx;
-        
-        /* 不是 order act */
-        idx = input.indexOf(";act=");
-        if (idx >= 0) {
-            idx += ";act=".length();
-            if (input.charAt(idx) == 'o') {
-                orderAct = true;
-            }
-        }
-        
-        if(!orderAct){
-            return null;
-        }
-
-        /* 空的 plist skip */
-        idx = input.indexOf(";plist=");
-        if (idx >= 0) {
-            idx += ";plist=".length();
-            if (input.charAt(idx) != ';') {
-                plistWithItems = true;
-            }
-        }
-        
-        boolean valid = orderAct && plistWithItems;
-        if(!valid){
-            return null;
-        }
-        
-        int endIdx = input.indexOf(";", idx);
-
-//        System.err.println(String.format("%s %s %s", idx, endIdx, input.substring(idx, endIdx)));
-        return input.substring(idx, endIdx);
-    }
 
   /**
    * Read a line terminated by a custom delimiter.
