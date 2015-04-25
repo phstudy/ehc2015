@@ -30,7 +30,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileSplit;
  */
 @InterfaceAudience.LimitedPrivate({"MapReduce", "Pig"})
 @InterfaceStability.Evolving
-public abstract class AbsLineRecordReader<T extends ILineReader> extends RecordReader<LongWritable, Text> {
+public abstract class AbsLineRecordReader extends RecordReader<LongWritable, Text> {
   private static final Log LOG = LogFactory.getLog(AbsLineRecordReader.class);
   public static final String MAX_LINE_LENGTH = 
     "mapreduce.input.linerecordreader.line.maxlength";
@@ -39,7 +39,7 @@ public abstract class AbsLineRecordReader<T extends ILineReader> extends RecordR
   private long start;
   private long pos;
   private long end;
-  private T in;
+  private ILineReader in;
   private FSDataInputStream fileIn;
   private Seekable filePosition;
   private int maxLineLength;
@@ -82,9 +82,9 @@ public void initialize(InputSplit genericSplit,
             fileIn, decompressor, start, end,
             SplittableCompressionCodec.READ_MODE.BYBLOCK);
         if (null == this.recordDelimiterBytes){
-          in = (T) create(cIn, job);
+          in = create(cIn, job);
         } else {
-          in = (T) create(cIn, job, this.recordDelimiterBytes);
+          in = create(cIn, job, this.recordDelimiterBytes);
         }
 
         start = cIn.getAdjustedStart();
@@ -92,10 +92,10 @@ public void initialize(InputSplit genericSplit,
         filePosition = cIn;
       } else {
         if (null == this.recordDelimiterBytes) {
-          in = (T) create(codec.createInputStream(fileIn, decompressor),
+          in = create(codec.createInputStream(fileIn, decompressor),
               job);
         } else {
-          in = (T) create(codec.createInputStream(fileIn,
+          in = create(codec.createInputStream(fileIn,
               decompressor), job, this.recordDelimiterBytes);
         }
         filePosition = fileIn;
@@ -103,9 +103,9 @@ public void initialize(InputSplit genericSplit,
     } else {
       fileIn.seek(start);
       if (null == this.recordDelimiterBytes){
-        in = (T) create(fileIn, job);
+        in = create(fileIn, job);
       } else {
-        in = (T) create(fileIn, job, this.recordDelimiterBytes);
+        in = create(fileIn, job, this.recordDelimiterBytes);
       }
 
       filePosition = fileIn;

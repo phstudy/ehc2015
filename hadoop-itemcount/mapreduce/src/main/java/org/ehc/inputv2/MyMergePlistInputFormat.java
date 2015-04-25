@@ -15,7 +15,7 @@ public class MyMergePlistInputFormat extends AbsInputFormat {
 
     @Override
     protected RecordReader<LongWritable, Text> buildRecordReader(byte[] recordDelimiterBytes) {
-        return new AbsLineRecordReader<ILineReader>() {
+        return new AbsLineRecordReader() {
 
             @Override
             protected ILineReader create(InputStream in, Configuration conf) throws IOException {
