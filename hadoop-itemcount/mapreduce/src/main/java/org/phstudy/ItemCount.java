@@ -22,7 +22,7 @@ public class ItemCount {
     private static String out = "out/" + new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
     private static String method = "0";
 
-    private static String result = "./Team01_Result.txt";
+    private static String result = "./Team34_Result.txt";
     private static String hdfs_out = "hdfs://master/tmp/Team01/EHC_1st.tar.gz";
     private static String hdfs_out_extracted = "hdfs://master/tmp/Team01/EHC_1st_round.log";
 
