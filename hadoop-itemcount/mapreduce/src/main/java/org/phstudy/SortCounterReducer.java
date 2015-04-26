@@ -20,7 +20,7 @@ public class SortCounterReducer extends Reducer<MyLongWritable, Text, Text, Text
             throws IOException, InterruptedException {
         for (Text value : values) {
             counter++;
-            if (counter < n) {
+            if (counter <= n) {
                 context.write(new Text(String.format("%02d", counter)), value);
             } else {
                 break;
@@ -32,7 +32,7 @@ public class SortCounterReducer extends Reducer<MyLongWritable, Text, Text, Text
     public void run(Context context) throws IOException, InterruptedException {
         setup(context);
         while (context.nextKey()) {
-            if (counter < n) {
+            if (counter <= n) {
                 reduce(context.getCurrentKey(), context.getValues(), context);
             } else {
                 break;
