@@ -18,13 +18,14 @@ import java.util.logging.Logger;
  * Created by study on 3/28/15.
  */
 public class ItemCount {
+    private static String TEAM_NUMBER = "Team34";
     private static String in = "./EHC_1st.tar.gz";
     private static String out = "out/" + new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
     private static String method = "0";
 
-    private static String result = "./Team34_Result.txt";
-    private static String hdfs_out = "hdfs://master/tmp/Team01/EHC_1st.tar.gz";
-    private static String hdfs_out_extracted = "hdfs://master/tmp/Team01/EHC_1st_round.log";
+    private static String result = "./" + TEAM_NUMBER + "_Result.txt";
+    private static String hdfs_out = "hdfs://master/tmp/" + TEAM_NUMBER + "/EHC_1st.tar.gz";
+    private static String hdfs_out_extracted = "hdfs://master/tmp/" + TEAM_NUMBER + "/EHC_1st_round.log";
 
     private static Logger logger = Logger.getLogger("ItemCount");
 
