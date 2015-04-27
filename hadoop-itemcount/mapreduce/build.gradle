@@ -56,3 +56,17 @@ task hadoop(dependsOn: jar, type: Exec) {
         return standardOutput.toString()
     }
 }
+
+task sourcesJar(type: Jar, dependsOn:classes) {
+     classifier = 'sources'
+     from sourceSets.main.allSource
+}
+
+task dist(type: Zip, dependsOn: [build, sourcesJar]) {
+    baseName = "Team34"
+    destinationDir = file(".")
+    into ('Team34') {
+        from 'build/libs'
+        from file('run_me')
+    }
+}
