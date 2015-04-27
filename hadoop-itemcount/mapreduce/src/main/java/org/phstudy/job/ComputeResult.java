@@ -11,9 +11,11 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.ehc.inputv1.MyInputFormat;
 import org.ehc.inputv2.MyMergePlistInputFormat;
 import org.ehc.inputv3.ByteBufferOrderPlistInputFormat;
+import org.ehc.output.MyTextOutputFormat;
 import org.phstudy.*;
 
 import java.io.File;
@@ -64,6 +66,7 @@ public class ComputeResult implements Runnable {
                 Job job2 = Job.getInstance(conf, "sort job");
                 job2.setNumReduceTasks(1);
                 job2.setJarByClass(ItemCount.class);
+                job2.setOutputFormatClass(MyTextOutputFormat.class);
 
                 job2.setMapperClass(SortCounterMapper.class);
                 job2.setReducerClass(SortCounterReducer.class);
