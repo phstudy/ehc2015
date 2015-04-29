@@ -11,6 +11,8 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.ehc.inputv1.MyInputFormat;
+import org.ehc.inputv2.MyMergePlistInputFormat;
 import org.ehc.inputv3.ByteBufferOrderPlistInputFormat;
 import org.phstudy.*;
 
@@ -41,6 +43,8 @@ public class ComputeResult implements Runnable {
             job.setJarByClass(ItemCount.class);
 
             job.setInputFormatClass(TextInputFormat.class);
+//            job.setInputFormatClass(MyInputFormat.class);
+            job.setInputFormatClass(MyMergePlistInputFormat.class);
             job.setInputFormatClass(ByteBufferOrderPlistInputFormat.class);
 
             job.setMapperClass(EHCWebLogsMapper.class);

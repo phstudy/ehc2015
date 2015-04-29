@@ -1,4 +1,4 @@
-package org.phstudy.input;
+package org.ehc.input.common;
 
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
@@ -9,7 +9,7 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 
 import com.google.common.base.Charsets;
 
-public class MyInputFormat extends TextInputFormat {
+public abstract class AbsInputFormat extends TextInputFormat {
 
     @Override
     public RecordReader<LongWritable, Text> createRecordReader(InputSplit split, TaskAttemptContext context) {
@@ -17,6 +17,8 @@ public class MyInputFormat extends TextInputFormat {
         byte[] recordDelimiterBytes = null;
         if (null != delimiter)
             recordDelimiterBytes = delimiter.getBytes(Charsets.UTF_8);
-        return new MyLineRecordReader(recordDelimiterBytes);
+        return buildRecordReader(recordDelimiterBytes);
     }
+
+    protected abstract RecordReader<LongWritable, Text> buildRecordReader(byte[] recordDelimiterBytes);
 }

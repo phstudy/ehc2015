@@ -11,16 +11,19 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class SortCounterReducer extends Reducer<MyLongWritable, Text, Text, Text> {
     static final int n = 20;
-    static final AtomicInteger counter = new AtomicInteger(0);
+    static int counter = 0;
+
     @Override
     protected void reduce(MyLongWritable count,
                           Iterable<Text> values,
                           Context context)
             throws IOException, InterruptedException {
         for (Text value : values) {
-            int cnt = counter.getAndIncrement();
-            if(cnt < n) {
-                context.write(new Text(String.format("%02d", cnt + 1)), value);
+            counter++;
+            if (counter <= n) {
+                context.write(new Text(String.format("%02d", counter)), value);
+            } else {
+                break;
             }
         }
     }
@@ -29,8 +32,10 @@ public class SortCounterReducer extends Reducer<MyLongWritable, Text, Text, Text
     public void run(Context context) throws IOException, InterruptedException {
         setup(context);
         while (context.nextKey()) {
-            if(counter.get() < 20) {
+            if (counter <= n) {
                 reduce(context.getCurrentKey(), context.getValues(), context);
+            } else {
+                break;
             }
         }
         cleanup(context);

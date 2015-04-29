@@ -1,4 +1,4 @@
-package org.ehc.inputv2;
+package org.ehc.inputv1;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -11,7 +11,7 @@ import org.ehc.input.common.AbsInputFormat;
 import org.ehc.input.common.AbsLineRecordReader;
 import org.ehc.input.common.ILineReader;
 
-public class MyMergePlistInputFormat extends AbsInputFormat {
+public class MyInputFormat extends AbsInputFormat {
 
     @Override
     protected RecordReader<LongWritable, Text> buildRecordReader(byte[] recordDelimiterBytes) {
@@ -19,13 +19,13 @@ public class MyMergePlistInputFormat extends AbsInputFormat {
 
             @Override
             protected ILineReader create(InputStream in, Configuration conf) throws IOException {
-                return new LineReaderV2(in, conf);
+                return new LineReaderV1(in, conf);
             }
 
             @Override
             protected ILineReader create(InputStream in, Configuration conf, byte[] recordDelimiterBytes)
                     throws IOException {
-                return new LineReaderV2(in, conf, recordDelimiterBytes);
+                return new LineReaderV1(in, conf, recordDelimiterBytes);
             }
         };
     }

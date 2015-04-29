@@ -1,6 +1,7 @@
-package org.ehc.inputv2;
+package org.ehc.input.common;
 
 import java.io.IOException;
+import java.io.InputStream;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -29,8 +30,8 @@ import org.apache.hadoop.mapreduce.lib.input.FileSplit;
  */
 @InterfaceAudience.LimitedPrivate({"MapReduce", "Pig"})
 @InterfaceStability.Evolving
-public class MyLineRecordReader extends RecordReader<LongWritable, Text> {
-  private static final Log LOG = LogFactory.getLog(MyLineRecordReader.class);
+public abstract class AbsLineRecordReader extends RecordReader<LongWritable, Text> {
+  private static final Log LOG = LogFactory.getLog(AbsLineRecordReader.class);
   public static final String MAX_LINE_LENGTH = 
     "mapreduce.input.linerecordreader.line.maxlength";
 
@@ -38,7 +39,7 @@ public class MyLineRecordReader extends RecordReader<LongWritable, Text> {
   private long start;
   private long pos;
   private long end;
-  private MyLineReader in;
+  private ILineReader in;
   private FSDataInputStream fileIn;
   private Seekable filePosition;
   private int maxLineLength;
@@ -48,14 +49,18 @@ public class MyLineRecordReader extends RecordReader<LongWritable, Text> {
   private Decompressor decompressor;
   private byte[] recordDelimiterBytes;
 
-  public MyLineRecordReader() {
+  public AbsLineRecordReader() {
   }
 
-  public MyLineRecordReader(byte[] recordDelimiter) {
+  public AbsLineRecordReader(byte[] recordDelimiter) {
     this.recordDelimiterBytes = recordDelimiter;
   }
+  
+  protected abstract ILineReader create(InputStream in, Configuration conf) throws IOException ;
+  protected abstract ILineReader create(InputStream in, Configuration conf, byte[] recordDelimiterBytes) throws IOException ;
 
-  public void initialize(InputSplit genericSplit,
+  @SuppressWarnings("unchecked")
+public void initialize(InputSplit genericSplit,
                          TaskAttemptContext context) throws IOException {
     FileSplit split = (FileSplit) genericSplit;
     Configuration job = context.getConfiguration();
@@ -77,9 +82,9 @@ public class MyLineRecordReader extends RecordReader<LongWritable, Text> {
             fileIn, decompressor, start, end,
             SplittableCompressionCodec.READ_MODE.BYBLOCK);
         if (null == this.recordDelimiterBytes){
-          in = new MyLineReader(cIn, job);
+          in = create(cIn, job);
         } else {
-          in = new MyLineReader(cIn, job, this.recordDelimiterBytes);
+          in = create(cIn, job, this.recordDelimiterBytes);
         }
 
         start = cIn.getAdjustedStart();
@@ -87,10 +92,10 @@ public class MyLineRecordReader extends RecordReader<LongWritable, Text> {
         filePosition = cIn;
       } else {
         if (null == this.recordDelimiterBytes) {
-          in = new MyLineReader(codec.createInputStream(fileIn, decompressor),
+          in = create(codec.createInputStream(fileIn, decompressor),
               job);
         } else {
-          in = new MyLineReader(codec.createInputStream(fileIn,
+          in = create(codec.createInputStream(fileIn,
               decompressor), job, this.recordDelimiterBytes);
         }
         filePosition = fileIn;
@@ -98,9 +103,9 @@ public class MyLineRecordReader extends RecordReader<LongWritable, Text> {
     } else {
       fileIn.seek(start);
       if (null == this.recordDelimiterBytes){
-        in = new MyLineReader(fileIn, job);
+        in = create(fileIn, job);
       } else {
-        in = new MyLineReader(fileIn, job, this.recordDelimiterBytes);
+        in = create(fileIn, job, this.recordDelimiterBytes);
       }
 
       filePosition = fileIn;

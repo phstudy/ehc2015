@@ -10,6 +10,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
+import org.ehc.input.common.ILineReader;
 
 /**
  * A class that provides a line reader from an input stream.
@@ -24,7 +25,7 @@ import org.apache.hadoop.io.Text;
  */
 @InterfaceAudience.LimitedPrivate({"MapReduce"})
 @InterfaceStability.Unstable
-public class MyLineReader {
+public class LineReaderV2 implements ILineReader {
   private static final int DEFAULT_BUFFER_SIZE = 64 * 1024;
   private int bufferSize = DEFAULT_BUFFER_SIZE;
   private InputStream in;
@@ -47,7 +48,7 @@ public class MyLineReader {
    * @param in The input stream
    * @throws IOException
    */
-  public MyLineReader(InputStream in) {
+  public LineReaderV2(InputStream in) {
     this(in, DEFAULT_BUFFER_SIZE);
   }
 
@@ -58,7 +59,7 @@ public class MyLineReader {
    * @param bufferSize Size of the read buffer
    * @throws IOException
    */
-  public MyLineReader(InputStream in, int bufferSize) {
+  public LineReaderV2(InputStream in, int bufferSize) {
     this.in = in;
     this.reader = new BufferedReader(new InputStreamReader(in));
     this.bufferSize = bufferSize;
@@ -74,7 +75,7 @@ public class MyLineReader {
    * @param conf configuration
    * @throws IOException
    */
-  public MyLineReader(InputStream in, Configuration conf) throws IOException {
+  public LineReaderV2(InputStream in, Configuration conf) throws IOException {
     this(in, conf.getInt("io.file.buffer.size", DEFAULT_BUFFER_SIZE));
   }
 
@@ -85,7 +86,7 @@ public class MyLineReader {
    * @param in The input stream
    * @param recordDelimiterBytes The delimiter
    */
-  public MyLineReader(InputStream in, byte[] recordDelimiterBytes) {
+  public LineReaderV2(InputStream in, byte[] recordDelimiterBytes) {
     this.in = in;
     this.bufferSize = DEFAULT_BUFFER_SIZE;
     this.buffer = new byte[this.bufferSize];
@@ -101,7 +102,7 @@ public class MyLineReader {
    * @param recordDelimiterBytes The delimiter
    * @throws IOException
    */
-  public MyLineReader(InputStream in, int bufferSize,
+  public LineReaderV2(InputStream in, int bufferSize,
       byte[] recordDelimiterBytes) {
     this.in = in;
     this.bufferSize = bufferSize;
@@ -119,7 +120,7 @@ public class MyLineReader {
    * @param recordDelimiterBytes The delimiter
    * @throws IOException
    */
-  public MyLineReader(InputStream in, Configuration conf,
+  public LineReaderV2(InputStream in, Configuration conf,
       byte[] recordDelimiterBytes) throws IOException {
     this.in = in;
     this.bufferSize = conf.getInt("io.file.buffer.size", DEFAULT_BUFFER_SIZE);
