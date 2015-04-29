@@ -25,7 +25,7 @@ public class ItemCount {
 
     private static String result = "./" + TEAM_NUMBER + "_Result.txt";
     private static String hdfs_out = "hdfs://master/tmp/" + TEAM_NUMBER + "/EHC_1st.tar.gz";
-    private static String hdfs_out_extracted = "hdfs://master/tmp/" + TEAM_NUMBER + "/EHC_1st_round.log";
+    public static String hdfs_out_extracted = "hdfs://master/tmp/" + TEAM_NUMBER + "/EHC_1st_round.log";
 
     private static Logger logger = Logger.getLogger("ItemCount");
 
