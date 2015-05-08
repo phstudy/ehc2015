@@ -145,6 +145,6 @@ Type "help", "copyright", "credits" or "license" for more information.
 
 不過實際上單純將檔案傳入 HDFS 約 14 秒多，也許比賽的環境有些參數是我們沒有想到的（或是官方文件沒有更新!?）。
 
-
+由於知道不同 EC2 Instance Type 對的頻寬不同，我們試過往上開 1 個等級，總體時間就減至 14 ~ 16 秒左右。這也提醒了若未來有應用是要大量寫回 EBS 的情況，Instance Type 就不能太省。好在，多數的情況是由 EBS Network In 的流量，在 EC2 的記憶體間傳遞資料，一般來說不會遇到太大的問題。
 
 
