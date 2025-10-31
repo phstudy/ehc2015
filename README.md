@@ -1,6 +1,6 @@
 # EHC 2015
 
-競賽資訊：http://ehc.etusolution.com/
+競賽資訊：https://web.archive.org/web/20150503053952/http://ehc.etusolution.com/
 
 ## 初賽：商品銷售排序計算
 
