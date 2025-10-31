@@ -6,6 +6,9 @@ Sys.setenv(JAVA_HOME="/System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Content
 
 options(java.parameters = "-Xmx1000m")
 
+
+install.packages("rJava", repos="http://cran.rstudio.com/")  
+install.packages("./source/RImpala_0.1.5.tar.gz", repos=NULL, type="source")
 library(RImpala)
 
 rimpala.init(libs="./lib")
